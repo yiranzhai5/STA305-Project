@@ -213,18 +213,194 @@ Therefore, when the effect size is reduced from 1.7 to 1, he required sample siz
 
 # Part 3
 
+## 3A: One-way ANOVA
 
-## 3A
+### Description
 
-### Tasks
+```{r}
+library(scidesignR)
+data(painstudy)
+summary(painstudy)
+```
 
-## 3B
+The dataset *painstudy* contains observations of pain levels under different treatment groups. The objective is to determine whether the mean pain levels differ across treatments.
 
-### Tasks
 
-## 3C
+### Check Assumptions
 
-### Tasks
+```{r}
+aov.pain <- aov(pain ~ trt, data = painstudy)
+summary(aov.pain)
+```
+
+```{r}
+# Checking Assumption: Constant Variance
+plot(aov.pain$fitted.values, aov.pain$residuals,
+     ylab = "Residuals", xlab = "Fitted",
+     main = "One-way ANOVA")
+abline(h = 0)
+```
+
+```{r}
+# Checking Assumption: Normality
+qqnorm(aov.pain$residuals, main = "Normal Q-Q Plot")
+qqline(aov.pain$residuals)
+```
+
+To evaluate the assumptions of the ANOVA model, diagnostic plots were examined. The residuals appear randomly scattered, suggesting constant variance, and the Q-Q plot indicates approximate normality.
+
+
+### Interpret Results
+
+The null hypothesis is that all treatment means are equal:
+
+H₀: μ₁ = μ₂ = μ₃  
+
+The alternative hypothesis is that at least one treatment mean differs:
+
+Hₐ: Not all μ are equal.
+
+Based on the ANOVA output, the p-value is less than 0.001.
+
+Since the p-value is smaller than the significance level (α = 0.05), we reject the null hypothesis.
+
+```{r}
+TukeyHSD(aov(pain ~ trt, data = painstudy))
+```
+
+Further analysis using Tukey’s post-hoc test shows that all pairwise differences between treatments are statistically significant.
+
+---
+
+### Conclusion
+
+There is sufficient evidence to conclude that treatment has a statistically significant effect on pain levels. Among the treatments, Treatment B has the highest mean response, followed by Treatment A, while Treatment C has the lowest.
+
+## 3B: Randomized Block Design
+
+### Description
+
+```{r}
+data(shoedat_obs)
+summary(shoedat_obs)
+```
+
+```{r}
+shoe_long <- data.frame(
+  boy = rep(shoedat_obs$boy, 2),
+  treatment = rep(c("A", "B"), each = nrow(shoedat_obs)),
+  side = c(shoedat_obs$sideA, shoedat_obs$sideB),
+  wear = c(shoedat_obs$wearA, shoedat_obs$wearB)
+)
+
+shoe_long$boy <- factor(shoe_long$boy)
+shoe_long$treatment <- factor(shoe_long$treatment)
+```
+
+### Check Assumptions
+
+```{r}
+rbd_model <- aov(wear ~ treatment + boy, data = shoe_long)
+summary(rbd_model)
+```
+
+```{r}
+plot(rbd_model$fitted.values, rbd_model$residuals,
+     xlab = "Fitted values",
+     ylab = "Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0)
+```
+
+```{r}
+qqnorm(rbd_model$residuals, main = "Normal Q-Q Plot")
+qqline(rbd_model$residuals)
+```
+
+### Interpret Results
+
+```{r}
+unblocked_model <- aov(wear ~ treatment, data = shoe_long)
+summary(unblocked_model)
+```
+
+The null hypothesis is:
+
+H₀: The mean wear is the same for both treatments.
+
+The alternative hypothesis is:
+
+Hₐ: The mean wear differs between the two treatments.
+
+Based on the ANOVA output, the p-value for treatment is less than 0.05, so we reject H₀.
+
+Compared with the unblocked analysis, including boy as a blocking factor reduces the residual variation, which means part of the variability is explained by differences between boys.
+
+### Conclusion
+
+There is sufficient evidence to conclude that treatment has a significant effect on wear. Using boy as a blocking factor improves the precision of the treatment comparison by accounting for individual differences.
+
+## 3C: Latin Square
+
+### Description
+
+```{r}
+data(BR_LatSq)
+summary(BR_LatSq)
+```
+
+In the dataset BR_LatSq, the response variable is Value, the treatment variable is Treat, and the two blocking factors are Dogs and Weeks.
+
+This is a Latin square design because it controls for two possible sources of nuisance variation at the same time. In this experiment, Dogs and Weeks are treated as blocking factors, while the main objective is to evaluate whether Treat has a significant effect on the response.
+
+### Check Assumptions
+
+```{r}
+BR_LatSq$Dogs <- as.factor(BR_LatSq$Dogs)
+BR_LatSq$Weeks <- as.factor(BR_LatSq$Weeks)
+BR_LatSq$Treat <- as.factor(BR_LatSq$Treat)
+```
+
+```{r}
+lat.model <- lm(Value ~ Treat + as.factor(Dogs) + as.factor(Weeks), data = BR_LatSq)
+anova(lat.model)
+```
+
+```{r}
+qqnorm(lat.model$residuals, main = "Q-Q Plot for BR_LatSq")
+qqline(lat.model$residuals)
+```
+
+```{r}
+plot(lat.model$fitted.values, lat.model$residuals,
+     ylab = "Residuals", xlab = "Fitted",
+     main = "Residual Plot")
+abline(h = 0)
+```
+
+The Q-Q plot suggests that the residuals are approximately normally distributed. The residual plot does not show any strong pattern, so the assumption of constant variance appears reasonable. Overall, there is no strong evidence that the model assumptions are violated.
+
+### Interpret Results
+
+The null hypothesis is:
+
+H₀: All treatment means are equal.
+
+The alternative hypothesis is:
+
+Hₐ: At least one treatment mean differs.
+
+Based on the ANOVA table, the p-value for Treat is approximately 0.1362.
+
+Since this p-value is greater than the significance level of 0.05, we fail to reject the null hypothesis.
+
+In addition, the blocking factors Dogs and Weeks are also not statistically significant, with p-values of approximately 0.2198 and 0.8878, respectively.
+
+### Conclusion
+
+There is insufficient evidence to conclude that the treatment has a significant effect on the response variable after accounting for the blocking factors Dogs and Weeks.
+
+This suggests that, in this experiment, neither the treatment nor the two blocking factors explain a statistically significant amount of variation in the response.
 
 
 The data from the R package \textit{coronavirus} has been reconstructed to have the first column representing recordings 
@@ -713,14 +889,48 @@ req_n_largeSD
 
 ####################### Part 3 ###############################
 
+```{r, echo=TRUE, eval=FALSE}
 
+# 3A
+data(painstudy)
+aov.pain <- aov(pain ~ trt, data = painstudy)
+summary(aov.pain)
 
+plot(aov.pain$fitted.values, aov.pain$residuals)
+qqnorm(aov.pain$residuals)
 
+TukeyHSD(aov.pain)
 
+# 3B
+data(shoedat_obs)
 
+shoe_long <- data.frame(
+  boy = rep(shoedat_obs$boy, 2),
+  treatment = rep(c("A", "B"), each = nrow(shoedat_obs)),
+  side = c(shoedat_obs$sideA, shoedat_obs$sideB),
+  wear = c(shoedat_obs$wearA, shoedat_obs$wearB)
+)
 
+shoe_long$boy <- factor(shoe_long$boy)
+shoe_long$treatment <- factor(shoe_long$treatment)
 
+rbd_model <- aov(wear ~ treatment + boy, data = shoe_long)
+summary(rbd_model)
 
+unblocked_model <- aov(wear ~ treatment, data = shoe_long)
+summary(unblocked_model)
+
+# 3C
+data(BR_LatSq)
+
+BR_LatSq$Dogs <- as.factor(BR_LatSq$Dogs)
+BR_LatSq$Weeks <- as.factor(BR_LatSq$Weeks)
+BR_LatSq$Treat <- as.factor(BR_LatSq$Treat)
+
+lat.model <- aov(Value ~ Treat + Dogs + Weeks, data = BR_LatSq)
+summary(lat.model)
+
+```
 
 ##################### part 4 ################################
 ## Load data
